@@ -40,34 +40,217 @@ CartController	15	Débogage des opérations d'ajout/suppression dans le panier.
 Startup	20	Débogage de la configuration initiale des services (Constructeur).
 ________________________________________
 4. Flux d'Exécution : Affichage des Produits (Tâche 5)
-Le flux détaillé des namespaces, classes et méthodes visités avant l'affichage des produits sur l'écran d'accueil (/) se déroule comme suit :
-1.	Démarrage (Program)
-o	P2FixAnAppDotNetCode : Program.Main() → Program.BuildWebHost()
-o	P2FixAnAppDotNetCode : Startup (Constructeur, ligne 20) $\rightarrow$ Point d'arrêt
-o	P2FixAnAppDotNetCode : Startup.ConfigureServices() (Enregistrement DI)
-o	P2FixAnAppDotNetCode.Models.Repositories : ProductRepository (Constructeur) $\rightarrow$ GenerateProductData() (Initialisation des données)
-o	P2FixAnAppDotNetCode : Startup.Configure() (Configuration du pipeline HTTP et du routage)
-2.	Requête HTTP (/)
-o	Le routage MVC mappe la requête par défaut (/) à : ProductController.Index()
-o	P2FixAnAppDotNetCode.Controllers : ProductController (Constructeur, ligne 15) $\rightarrow$ Point d'arrêt
-o	P2FixAnAppDotNetCode.Controllers : ProductController.Index() (Action)
-3.	Récupération des Données
-o	P2FixAnAppDotNetCode.Models.Services : ProductService.GetAllProducts()
-o	P2FixAnAppDotNetCode.Models.Repositories : ProductRepository.GetAllProducts() (Filtre Stock > 0, Tri par Nom)
-o	Retour de la liste des produits au ProductController.Index().
-4.	Rendu de la Vue
-o	ProductController.Index() retourne View(products).
-o	Le moteur de vues Razor utilise : Views/Product/Index.cshtml
-o	Le layout principal est inclus : Views/Shared/_Layout.cshtml
-5.	Composants de Vue
-o	Lors du rendu du layout, le composant de vue est appelé :
-o	P2FixAnAppDotNetCode.Components : CartSummaryViewComponent (Constructeur, ligne 12) $\rightarrow$ Point d'arrêt
-o	P2FixAnAppDotNetCode.Components : CartSummaryViewComponent.Invoke() (Affiche le résumé du panier)
-6.	Réponse
-o	Le HTML généré est envoyé au navigateur.
-Mode de Débogage Recommandé	Description
-Pas à pas détaillé (F11)	Pour suivre l'exécution en entrant dans chaque méthode (incluant les méthodes du framework).
-Pas à pas principal (F10)	Pour exécuter ligne par ligne dans le contexte actuel sans entrer dans les appels de méthodes.
+
+### Description du Flux d'Exécution
+
+Le flux détaillé des **namespaces, classes et méthodes** visités avant l'affichage des produits sur l'écran d'accueil du navigateur se déroule comme suit :
+
+#### Phase 1 : Démarrage de l'Application
+
+**1. Namespace : `P2FixAnAppDotNetCode`**  
+**Classe : `Program`**  
+**Méthode : `Main(string[] args)` (ligne 8)**  
+**Mode de débogage : Pas à pas principal (F10)**  
+Point d'entrée de l'application. Appelle `BuildWebHost(args).Run()`.
+
+**2. Namespace : `P2FixAnAppDotNetCode`**  
+**Classe : `Program`**  
+**Méthode : `BuildWebHost(string[] args)` (ligne 13)**  
+**Mode de débogage : Pas à pas détaillé (F11)**  
+Crée et configure l'hôte web avec `WebHost.CreateDefaultBuilder(args)` et `UseStartup<Startup>()`.
+
+**3. Namespace : `Microsoft.AspNetCore`**  
+**Classe : `WebHost`**  
+**Méthode : `CreateDefaultBuilder(args)` (ligne 14)**  
+**Mode de débogage : Pas à pas sortant (Shift+F11)**  
+Configuration par défaut du builder (méthode interne du framework).
+
+**4. Namespace : `P2FixAnAppDotNetCode`**  
+**Classe : `Startup`**  
+**Méthode : `Startup(IConfiguration configuration)` (ligne 20)**  
+**Mode de débogage : Pas à pas principal (F10)**  
+**🔴 Point d'arrêt - Constructeur** - Initialise la configuration de l'application.
+
+**5. Namespace : `P2FixAnAppDotNetCode`**  
+**Classe : `Startup`**  
+**Méthode : `ConfigureServices(IServiceCollection services)` (ligne 26)**  
+**Mode de débogage : Pas à pas détaillé (F11)**  
+Enregistrement des services dans le conteneur d'injection de dépendances (DI) : `ICart`, `IProductService`, `IProductRepository`, `ILanguageService`, etc.
+
+**6. Namespace : `P2FixAnAppDotNetCode.Models.Repositories`**  
+**Classe : `ProductRepository`**  
+**Méthode : `ProductRepository()` - Constructeur (ligne 13)**  
+**Mode de débogage : Pas à pas détaillé (F11)**  
+Constructeur appelé lors de l'enregistrement du service. Initialise la liste `_products` et appelle `GenerateProductData()`.
+
+**7. Namespace : `P2FixAnAppDotNetCode.Models.Repositories`**  
+**Classe : `ProductRepository`**  
+**Méthode : `GenerateProductData()` (ligne 22)**  
+**Mode de débogage : Pas à pas détaillé (F11)**  
+Génère et ajoute les 9 produits par défaut à la liste `_products` (XIAOMI Redmi 13C, Micro-ondes, etc.).
+
+**8. Namespace : `P2FixAnAppDotNetCode`**  
+**Classe : `Startup`**  
+**Méthode : `Configure(IApplicationBuilder app, IWebHostEnvironment env)` (ligne 65)**  
+**Mode de débogage : Pas à pas principal (F10)**  
+Configuration du pipeline HTTP : `UseStaticFiles()`, `UseRequestLocalization()`, `UseSession()`, `UseRouting()`, `UseEndpoints()` avec la route par défaut `{controller=Product}/{action=Index}/{id?}`.
+
+#### Phase 2 : Requête HTTP et Routage
+
+**9. Namespace : `Microsoft.AspNetCore.Routing`**  
+**Classe : `RouteMiddleware` (interne)**  
+**Méthode : (Méthodes internes du middleware)**  
+**Mode de débogage : Pas à pas sortant (Shift+F11)**  
+Le middleware de routage analyse l'URL de la requête HTTP entrante (`/`) et la mappe selon la route par défaut vers `ProductController.Index()`.
+
+**10. Namespace : `P2FixAnAppDotNetCode.Controllers`**  
+**Classe : `ProductController`**  
+**Méthode : `ProductController(IProductService productService, ILanguageService languageService)` - Constructeur (ligne 15)**  
+**Mode de débogage : Pas à pas principal (F10)**  
+**🔴 Point d'arrêt - Injection de dépendances** - Le conteneur DI instancie le contrôleur et injecte `IProductService` et `ILanguageService`.
+
+**11. Namespace : `P2FixAnAppDotNetCode.Controllers`**  
+**Classe : `ProductController`**  
+**Méthode : `Index()` (ligne 19)**  
+**Mode de débogage : Pas à pas détaillé (F11)**  
+Action du contrôleur qui sera exécutée. Appelle `_productService.GetAllProducts()` pour récupérer la liste des produits.
+
+#### Phase 3 : Récupération des Données
+
+**12. Namespace : `P2FixAnAppDotNetCode.Models.Services`**  
+**Classe : `ProductService`**  
+**Méthode : `GetAllProducts()` (ligne 24)**  
+**Mode de débogage : Pas à pas détaillé (F11)**  
+Service métier qui délègue la récupération des produits au repository. Appelle `_productRepository.GetAllProducts().ToList()`.
+
+**13. Namespace : `P2FixAnAppDotNetCode.Models.Repositories`**  
+**Classe : `ProductRepository`**  
+**Méthode : `GetAllProducts()` (ligne 41)**  
+**Mode de débogage : Pas à pas détaillé (F11)**  
+Filtre les produits avec `Stock > 0` en utilisant `Where(p => p.Stock > 0)`, les trie par nom avec `OrderBy(p => p.Name)`, puis convertit en liste et retourne un tableau.
+
+**14. Namespace : `System.Linq`**  
+**Classe : `Enumerable`**  
+**Méthodes : `Where()`, `OrderBy()`, `ToList()` (ligne 43)**  
+**Mode de débogage : Pas à pas sortant (Shift+F11)**  
+Opérations LINQ sur la liste de produits (méthodes d'extension du framework).
+
+#### Phase 4 : Rendu de la Vue
+
+**15. Namespace : `P2FixAnAppDotNetCode.Controllers`**  
+**Classe : `ProductController`**  
+**Méthode : `Index()` - Retour (ligne 22)**  
+**Mode de débogage : Pas à pas principal (F10)**  
+Retourne `View(products)` avec la liste des produits comme modèle.
+
+**16. Namespace : `Microsoft.AspNetCore.Mvc.ViewEngines`**  
+**Classe : `ViewEngine` (interne)**  
+**Méthode : (Méthodes internes du moteur de vues)**  
+**Mode de débogage : Pas à pas sortant (Shift+F11)**  
+Le moteur de vues Razor localise et compile la vue `Views/Product/Index.cshtml` en fonction de la culture (en, fr, wo).
+
+**17. Namespace : `P2FixAnAppDotNetCode.Views.Product`**  
+**Fichier : `Index.cshtml` (Vue Razor)**  
+**Mode de débogage : Pas à pas principal (F10)**  
+Vue Razor qui reçoit le modèle `IEnumerable<Product>`. Itère sur les produits avec `@foreach (Product p in Model)` et génère le HTML pour afficher les colonnes : Name, Description, Price, Stock, et les boutons "Ajouter au panier".
+
+**18. Namespace : `P2FixAnAppDotNetCode.Views.Shared`**  
+**Fichier : `_Layout.cshtml` (Layout)**  
+**Mode de débogage : Pas à pas principal (F10)**  
+Layout principal qui enveloppe la vue. Inclut les fichiers CSS, JavaScript, et appelle les composants de vue (`CartSummary`, `LanguageSelector`).
+
+#### Phase 5 : Composants de Vue (ViewComponents)
+
+**19. Namespace : `P2FixAnAppDotNetCode.Components`**  
+**Classe : `CartSummaryViewComponent`**  
+**Méthode : `CartSummaryViewComponent(ICart cart)` - Constructeur (ligne 12)**  
+**Mode de débogage : Pas à pas principal (F10)**  
+**🔴 Point d'arrêt - Constructeur** - Injection du panier et conversion en `Cart`.
+
+**20. Namespace : `P2FixAnAppDotNetCode.Components`**  
+**Classe : `CartSummaryViewComponent`**  
+**Méthode : `Invoke()` (ligne 15)**  
+**Mode de débogage : Pas à pas détaillé (F11)**  
+Retourne la vue du composant avec le panier pour afficher le résumé (nombre d'articles, total).
+
+**21. Namespace : `P2FixAnAppDotNetCode.Components`**  
+**Classe : `LanguageSelectorViewComponent`**  
+**Méthode : `Invoke(ILanguageService languageService)` (ligne 8)**  
+**Mode de débogage : Pas à pas principal (F10)**  
+Retourne la vue du sélecteur de langue pour afficher le dropdown avec les options (Anglais, Français, Espagnol, Wolof).
+
+#### Phase 6 : Réponse HTTP
+
+**22. Namespace : `Microsoft.AspNetCore.Http`**  
+**Classe : `HttpResponse` (interne)**  
+**Méthode : (Méthodes internes de réponse HTTP)**  
+**Mode de débogage : Pas à pas sortant (Shift+F11)**  
+Le HTML généré est envoyé comme réponse HTTP au navigateur via les méthodes internes du framework.
+
+### Résumé du Flux Complet
+
+```
+Program.Main() (F10)
+  ↓
+Program.BuildWebHost() (F11)
+  ↓
+Startup.Constructeur ligne 20 (🔴 Point d'arrêt - F10)
+  ↓
+Startup.ConfigureServices() (F11)
+  ↓
+ProductRepository.Constructeur (F11)
+  ↓
+ProductRepository.GenerateProductData() (F11)
+  ↓
+Startup.Configure() (F10)
+  ↓
+[Attente requête HTTP]
+  ↓
+RouteMiddleware - Routage (Shift+F11)
+  ↓
+ProductController.Constructeur ligne 15 (🔴 Point d'arrêt - F10)
+  ↓
+ProductController.Index() (F11)
+  ↓
+ProductService.GetAllProducts() (F11)
+  ↓
+ProductRepository.GetAllProducts() (F11)
+  ↓
+ProductController.Index() retourne View(products) (F10)
+  ↓
+Views/Product/Index.cshtml - Rendu (F10)
+  ↓
+Views/Shared/_Layout.cshtml (F10)
+  ↓
+CartSummaryViewComponent.Constructeur ligne 12 (🔴 Point d'arrêt - F10)
+  ↓
+CartSummaryViewComponent.Invoke() (F11)
+  ↓
+LanguageSelectorViewComponent.Invoke() (F10)
+  ↓
+HTML généré → Navigateur
+```
+
+### Modes de Débogage Utilisés
+
+**Pas à pas détaillé (F11)**  
+Utilisé pour entrer dans les méthodes et suivre l'exécution complète. Exemples dans ce flux : `ProductService.GetAllProducts()`, `ProductRepository.GetAllProducts()`, `ProductRepository.GenerateProductData()`, `CartSummaryViewComponent.Invoke()`.
+
+**Pas à pas principal (F10)**  
+Utilisé pour exécuter ligne par ligne sans entrer dans les appels de méthodes. Exemples dans ce flux : Points d'arrêt aux constructeurs (`Startup` ligne 20, `ProductController` ligne 15, `CartSummaryViewComponent` ligne 12), retours de méthodes, rendu des vues Razor.
+
+**Pas à pas sortant (Shift+F11)**  
+Utilisé pour sortir rapidement d'une méthode du framework sans suivre son exécution interne. Exemples dans ce flux : Méthodes internes du framework ASP.NET Core (`WebHost.CreateDefaultBuilder()`, `RouteMiddleware`, `ViewEngine`, `HttpResponse`).
+
+### Points d'Arrêt Stratégiques
+
+Les points d'arrêt ont été placés aux lignes suivantes pour observer le flux :
+
+1. **Startup ligne 20** : Observation de l'initialisation de la configuration lors du démarrage de l'application.
+2. **ProductController ligne 15** : Observation de l'injection de dépendances lors de la création du contrôleur.
+3. **CartSummaryViewComponent ligne 12** : Observation de l'initialisation du composant de vue lors du rendu du layout.
+
+Ces points permettent de suivre le flux complet depuis le démarrage jusqu'à l'affichage final dans le navigateur.
 ________________________________________
 5. Déploiement (Tâche 7)
 La solution a été déployée en un exécutable autonome Windows à l'aide de la commande dotnet publish.
